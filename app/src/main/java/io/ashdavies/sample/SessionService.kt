@@ -15,16 +15,14 @@ internal class SessionService {
         while (progress < 1) {
             emit(SessionState.Loading(progress))
             delay(200.milliseconds)
-            progress += 0.2f
+            progress += 0.1f
         }
 
         if (nextBoolean()) {
             emit(SessionState.LoggedIn(username))
         } else {
-            val throwable = IllegalStateException()
+            val throwable = IllegalStateException("Random failure occurred")
             emit(SessionState.Failure(throwable))
         }
     }
 }
-
-
