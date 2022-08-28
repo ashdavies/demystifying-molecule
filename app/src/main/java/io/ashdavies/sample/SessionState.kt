@@ -14,4 +14,8 @@ internal sealed interface SessionState {
     data class LoggedIn(
         val username: String
     ) : SessionState
+
+    data class Failure(
+        val cause: Throwable,
+    ) : SessionState
 }

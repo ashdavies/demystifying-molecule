@@ -18,6 +18,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,6 +31,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 @Composable
 @Preview(showBackground = true)
@@ -38,16 +42,26 @@ internal fun MainScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center,
         modifier = modifier.padding(20.dp)
     ) {
-        var _state: SessionState by rememberSaveable { mutableStateOf(SessionState.LoggedOut()) }
+        var _sessionState by rememberSaveable { mutableStateOf<SessionState>(SessionState.LoggedOut()) }
+        val sessionService = remember { SessionService() }
+        val coroutineScope = rememberCoroutineScope()
 
-        when (val state: SessionState = _state) {
-            is SessionState.Loading -> ProgressIndicator(state.progress)
-            is SessionState.LoggedIn -> LoggedInScreen(state.username)
+        when (val sessionState = _sessionState) {
+            is SessionState.Failure -> FailureScreen(sessionState.cause.message ?: defaultFailureMessage())
+            is SessionState.Loading -> ProgressIndicator(sessionState.progress)
+            is SessionState.LoggedIn -> LoggedInScreen(sessionState.username)
             is SessionState.LoggedOut -> LoginScreen(
-                onValueChange = { username, password -> _state = SessionState.LoggedOut(username, password) },
-                onLoginClick = { },
-                state = state,
-            )
+                onValueChange = { username, password -> _sessionState = SessionState.LoggedOut(username, password) },
+                state = sessionState,
+            ) {
+                val username = requireNotNull(sessionState.username) { "Username should not be null" }
+                val password = requireNotNull(sessionState.password) { "Password should not be null" }
+
+                sessionService
+                    .login(username, password)
+                    .onEach { _sessionState = it }
+                    .launchIn(coroutineScope)
+            }
         }
     }
 }
@@ -114,3 +128,10 @@ private fun LoggedInScreen(username: String, modifier: Modifier = Modifier) {
         modifier = modifier,
     )
 }
+
+@Composable
+private fun FailureScreen(message: String, modifier: Modifier = Modifier) {
+    Text(message, modifier)
+}
+
+private fun defaultFailureMessage() = "Something went wrong, that's all we know"
