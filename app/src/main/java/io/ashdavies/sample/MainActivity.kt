@@ -23,21 +23,16 @@ internal class MainActivity : ComposeActivity({
     DemystifyingMoleculeTheme {
         Surface(
             color = MaterialTheme.colorScheme.background,
-            content = { Greeting("Android") },
             modifier = Modifier.fillMaxSize(),
+            content = { MainScreen() },
         )
     }
 })
 
 @Composable
-private fun Greeting(name: String) {
-    Text(text = "Hello $name!")
-}
-
-@Composable
 @Preview(showBackground = true)
 private fun DefaultPreview() {
     DemystifyingMoleculeTheme {
-        Greeting("Android")
+        Text("Hello World")
     }
 }
