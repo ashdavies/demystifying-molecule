@@ -11,10 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import io.ashdavies.sample.ui.theme.DemystifyingMoleculeTheme
-import kotlin.random.Random
 
-internal abstract class ComposeActivity(private val content: @Composable () -> Unit) :
-  ComponentActivity() {
+internal abstract class ComposeActivity(private val content: @Composable () -> Unit) : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContent(content = content)

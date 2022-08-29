@@ -12,7 +12,7 @@ sealed class LoginResult {
   object Success : LoginResult()
 }
 
-internal class SessionService {
+class SessionService {
   private val random = Random(System.currentTimeMillis())
   suspend fun login(
     username: String,
