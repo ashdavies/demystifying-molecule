@@ -64,26 +64,32 @@ private fun LoginView(
 
   if (click != null) {
     LaunchedEffect(click) {
-      val submittedUsername = username.value
-      val submittedPassword = password.value
-
-      when (val result = sessionService.login(submittedUsername, submittedPassword)) {
-        LoginResult.Success -> goTo(LoggedInScreen(submittedUsername))
+      when (val result = sessionService.login(username.value, password.value)) {
+        LoginResult.Success -> goTo(LoggedInScreen(username.value))
         is LoginResult.Failure -> goTo(ErrorScreen(result.throwable.message ?: "Failed to login"))
       }
     }
     ProgressView()
   } else {
-    Column(modifier = Modifier.padding(all = 48.dp)) {
-      Text(style = cursiveTextStyle, text = "Login")
-      RhythmSpacer()
+    LoginInputView(username, password, onSubmit = { click = (click ?: 0) + 1 })
+  }
+}
 
-      LabeledTextField(state = username, hidden = false, label = "Username")
-      RhythmSpacer()
-      LabeledTextField(state = password, hidden = true, label = "Password")
-      RhythmSpacer()
-      TextButton({ click = (click ?: 0) + 1 }, "Login")
-    }
+@Composable
+private fun LoginInputView(
+  username: MutableState<String>,
+  password: MutableState<String>,
+  onSubmit: ()->Unit,
+) {
+  Column(modifier = Modifier.padding(all = 48.dp)) {
+    Text(style = cursiveTextStyle, text = "Login")
+    RhythmSpacer()
+
+    LabeledTextField(state = username, hidden = false, label = "Username")
+    RhythmSpacer()
+    LabeledTextField(state = password, hidden = true, label = "Password")
+    RhythmSpacer()
+    TextButton(onSubmit, "Login")
   }
 }
 
