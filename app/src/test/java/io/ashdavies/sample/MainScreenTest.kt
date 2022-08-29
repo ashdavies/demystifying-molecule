@@ -1,10 +1,7 @@
 package io.ashdavies.sample
 
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import app.cash.molecule.RecompositionClock
 import app.cash.molecule.moleculeFlow
 import app.cash.turbine.test
@@ -20,16 +17,17 @@ internal class MainScreenTest {
 
   @Test
   fun immediate() = runTest {
-    moleculeFlow(RecompositionClock.Immediate) {
-      var count by remember { mutableStateOf(0) }
-      LaunchedEffect(Unit) {
+    val events = moleculeFlow(RecompositionClock.Immediate) {
+      val count by produceState(0) {
         while (true) {
-          delay(100)
-          count++
+          delay(timeMillis = 100)
+          value++
         }
       }
       count
-    }.test {
+    }
+
+    events.test {
       assertEquals(0, awaitItem())
 
       advanceTimeBy(100)
