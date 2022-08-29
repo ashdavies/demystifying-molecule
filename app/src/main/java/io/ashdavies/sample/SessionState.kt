@@ -1,21 +1,25 @@
 package io.ashdavies.sample
 
-internal sealed interface SessionState {
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
+internal sealed class SessionState : Parcelable {
 
     data class LoggedOut(
         val username: String? = null,
         val password: String? = null,
-    ) : SessionState
+    ) : SessionState()
 
     data class Loading(
         val progress: Float,
-    ) : SessionState
+    ) : SessionState()
 
     data class LoggedIn(
         val username: String
-    ) : SessionState
+    ) : SessionState()
 
     data class Failure(
         val cause: Throwable,
-    ) : SessionState
+    ) : SessionState()
 }
