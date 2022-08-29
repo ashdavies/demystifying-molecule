@@ -16,4 +16,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Demystifying Molecule"
+
 include ':app'

@@ -79,7 +79,7 @@ private fun LoginView(
 private fun LoginInputView(
   username: MutableState<String>,
   password: MutableState<String>,
-  onSubmit: ()->Unit,
+  onSubmit: () -> Unit,
 ) {
   Column(modifier = Modifier.padding(all = 48.dp)) {
     Text(style = cursiveTextStyle, text = "Login")
