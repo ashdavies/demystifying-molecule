@@ -3,29 +3,29 @@ package io.ashdavies.sample
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlin.random.Random
 import kotlin.random.Random.Default.nextBoolean
 import kotlin.time.Duration.Companion.milliseconds
 
+sealed class LoginResult {
+  data class Failure(val throwable: Throwable): LoginResult()
+  object Success : LoginResult()
+}
+
 internal class SessionService {
-  fun login(
+  private val random = Random(System.currentTimeMillis())
+  suspend fun login(
     username: String,
     password: String
-  ): Flow<SessionState> = flow {
+  ): LoginResult {
     check(username.isNotEmpty() && password.isNotEmpty()) { "Username or password is empty" }
 
-    var progress = 0f
+    delay(2000)
 
-    while (progress < 1) {
-      emit(SessionState.Loading(progress))
-      delay(200.milliseconds)
-      progress += 0.1f
-    }
-
-    if (nextBoolean()) {
-      emit(SessionState.LoggedIn(username))
+    return if (random.nextBoolean()) {
+      LoginResult.Success
     } else {
-      val throwable = IllegalStateException("Random failure occurred")
-      emit(SessionState.Failure(throwable))
+      LoginResult.Failure(IllegalStateException("Random failure occurred"))
     }
   }
 }

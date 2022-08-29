@@ -1,6 +1,5 @@
 package io.ashdavies.sample
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,10 +15,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,123 +28,133 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+
+val cursiveTextStyle = TextStyle(
+  fontFamily = FontFamily.Cursive,
+  fontSize = 40.sp,
+)
 
 @Composable
 @Preview(showBackground = true)
 internal fun MainScreen(modifier: Modifier = Modifier) {
-  Column(
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center,
-    modifier = modifier.padding(20.dp)
-  ) {
-    var _sessionState by rememberSaveable { mutableStateOf<SessionState>(SessionState.LoggedOut()) }
-    val sessionService = remember { SessionService() }
-    val coroutineScope = rememberCoroutineScope()
+  var currentScreen by rememberSaveable { mutableStateOf<Screen>(LoginScreen) }
+  val sessionService = remember { SessionService() }
 
-    when (val sessionState = _sessionState) {
-      is SessionState.Failure -> FailureScreen(
-        sessionState.cause.message ?: defaultFailureMessage()
-      )
-      is SessionState.Loading -> ProgressIndicator(sessionState.progress)
-      is SessionState.LoggedIn -> LoggedInScreen(sessionState.username)
-      is SessionState.LoggedOut -> LoginScreen(
-        onValueChange = { username, password ->
-          _sessionState = SessionState.LoggedOut(username, password)
-        },
-        state = sessionState,
-      ) {
-        val username = requireNotNull(sessionState.username) { "Username should not be null" }
-        val password = requireNotNull(sessionState.password) { "Password should not be null" }
+  val goTo: (Screen) -> Unit = { nextScreen -> currentScreen = nextScreen }
 
-        sessionService
-          .login(username, password)
-          .onEach { _sessionState = it }
-          .launchIn(coroutineScope)
+  when (val screen = currentScreen) {
+    is ErrorScreen -> ErrorView(screen.message, goTo)
+    is LoggedInScreen -> LoggedInView(screen.username, goTo)
+    is LoginScreen -> LoginView(sessionService = sessionService, goTo)
+  }
+}
+
+@Composable
+private fun LoginView(
+  sessionService: SessionService,
+  goTo: (Screen) -> Unit,
+) {
+  val username = remember { mutableStateOf("") }
+  val password = remember { mutableStateOf("") }
+  var click by remember { mutableStateOf<Int?>(null) }
+
+  if (click != null) {
+    LaunchedEffect(click) {
+      val submittedUsername = username.value
+      val submittedPassword = password.value
+
+      when (val result = sessionService.login(submittedUsername, submittedPassword)) {
+        LoginResult.Success -> goTo(LoggedInScreen(submittedUsername))
+        is LoginResult.Failure -> goTo(ErrorScreen(result.throwable.message ?: "Failed to login"))
       }
+    }
+    ProgressView()
+  } else {
+    Column(modifier = Modifier.padding(all = 48.dp)) {
+      Text(style = cursiveTextStyle, text = "Login")
+      RhythmSpacer()
+
+      LabeledTextField(state = username, hidden = false, label = "Username")
+      RhythmSpacer()
+      LabeledTextField(state = password, hidden = true, label = "Password")
+      RhythmSpacer()
+      TextButton({ click = (click ?: 0) + 1 }, "Login")
     }
   }
 }
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun LoginScreen(
-  state: SessionState.LoggedOut,
-  onValueChange: (username: String?, password: String?) -> Unit,
-  onLoginClick: () -> Unit,
+private fun RhythmSpacer() {
+  Spacer(modifier = Modifier.height(16.dp))
+}
+
+@Composable
+private fun TextButton(
+  onClick: () -> Unit,
+  text: String,
 ) {
-  Text(
-    style = TextStyle(
-      fontFamily = FontFamily.Cursive,
-      fontSize = 40.sp,
-    ),
-    text = "Login"
+  val height = 48.dp
+  Button(
+    content = { Text(text = text) },
+    shape = RoundedCornerShape(height),
+    onClick = onClick,
+    modifier = Modifier
+      .fillMaxWidth()
+      .height(height)
   )
+}
 
-  Spacer(modifier = Modifier.height(20.dp))
-
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun LabeledTextField(
+  state: MutableState<String>,
+  hidden: Boolean,
+  label: String,
+) {
   OutlinedTextField(
-    onValueChange = { onValueChange(it, state.password) },
-    label = { Text(text = "Username") },
-    value = state.username ?: "",
+    onValueChange = { state.value = it },
+    label = { Text(text = label) },
+    value = state.value,
+    keyboardOptions = if (hidden) KeyboardOptions(keyboardType = KeyboardType.Password)
+    else KeyboardOptions.Default,
+    visualTransformation = if (hidden) PasswordVisualTransformation()
+    else VisualTransformation.None,
   )
+}
 
-  Spacer(modifier = Modifier.height(20.dp))
-
-  OutlinedTextField(
-    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-    visualTransformation = PasswordVisualTransformation(),
-    onValueChange = { onValueChange(state.username, it) },
-    label = { Text(text = "Password") },
-    value = state.password ?: "",
-  )
-
-  Spacer(modifier = Modifier.height(20.dp))
-
-  Box(modifier = Modifier.padding(start = 40.dp)) {
-    Button(
-      content = { Text(text = "Login") },
-      shape = RoundedCornerShape(50.dp),
-      onClick = { onLoginClick() },
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(50.dp)
+@Composable
+private fun ProgressView() {
+  Box(Modifier.fillMaxSize()) {
+    CircularProgressIndicator(
+      Modifier.align(Alignment.Center),
     )
   }
 }
 
 @Composable
-private fun ProgressIndicator(
-  progress: Float,
-  modifier: Modifier = Modifier
-) {
-  CircularProgressIndicator(
-    modifier = modifier.fillMaxSize(),
-    progress = progress,
-  )
-}
-
-@Composable
-private fun LoggedInScreen(
+private fun LoggedInView(
   username: String,
-  modifier: Modifier = Modifier
+  goTo: (Screen) -> Unit,
 ) {
-  Text(
-    text = "Hello $username",
-    modifier = modifier,
-  )
+  Column(modifier = Modifier.padding(all = 48.dp)) {
+    Text(text = "Hello, $username!", Modifier.align(Alignment.CenterHorizontally))
+    RhythmSpacer()
+    TextButton(onClick = { goTo(LoginScreen) }, text = "Logout")
+  }
 }
 
 @Composable
-private fun FailureScreen(
+private fun ErrorView(
   message: String,
-  modifier: Modifier = Modifier
+  goTo: (Screen) -> Unit,
 ) {
-  Text(message, modifier)
+  Column(modifier = Modifier.padding(all = 48.dp)) {
+    Text(message)
+    RhythmSpacer()
+    TextButton(onClick = { goTo(LoginScreen) }, text = "Try again?")
+  }
 }
-
-private fun defaultFailureMessage() = "Something went wrong, that's all we know"
