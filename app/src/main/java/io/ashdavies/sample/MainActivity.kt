@@ -12,27 +12,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import io.ashdavies.sample.ui.theme.DemystifyingMoleculeTheme
 
-internal abstract class ComposeActivity(private val content: @Composable () -> Unit) : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent(content = content)
-    }
+internal abstract class ComposeActivity(private val content: @Composable () -> Unit) :
+  ComponentActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContent(content = content)
+  }
 }
 
 internal class MainActivity : ComposeActivity({
-    DemystifyingMoleculeTheme {
-        Surface(
-            color = MaterialTheme.colorScheme.background,
-            modifier = Modifier.fillMaxSize(),
-            content = { MainScreen() },
-        )
-    }
+  DemystifyingMoleculeTheme {
+    Surface(
+      color = MaterialTheme.colorScheme.background,
+      modifier = Modifier.fillMaxSize(),
+      content = { MainScreen() },
+    )
+  }
 })
 
 @Composable
 @Preview(showBackground = true)
 private fun DefaultPreview() {
-    DemystifyingMoleculeTheme {
-        Text("Hello World")
-    }
+  DemystifyingMoleculeTheme {
+    Text("Hello World")
+  }
 }

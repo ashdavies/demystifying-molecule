@@ -37,101 +37,114 @@ import kotlinx.coroutines.flow.onEach
 @Composable
 @Preview(showBackground = true)
 internal fun MainScreen(modifier: Modifier = Modifier) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = modifier.padding(20.dp)
-    ) {
-        var _sessionState by rememberSaveable { mutableStateOf<SessionState>(SessionState.LoggedOut()) }
-        val sessionService = remember { SessionService() }
-        val coroutineScope = rememberCoroutineScope()
+  Column(
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.Center,
+    modifier = modifier.padding(20.dp)
+  ) {
+    var _sessionState by rememberSaveable { mutableStateOf<SessionState>(SessionState.LoggedOut()) }
+    val sessionService = remember { SessionService() }
+    val coroutineScope = rememberCoroutineScope()
 
-        when (val sessionState = _sessionState) {
-            is SessionState.Failure -> FailureScreen(sessionState.cause.message ?: defaultFailureMessage())
-            is SessionState.Loading -> ProgressIndicator(sessionState.progress)
-            is SessionState.LoggedIn -> LoggedInScreen(sessionState.username)
-            is SessionState.LoggedOut -> LoginScreen(
-                onValueChange = { username, password -> _sessionState = SessionState.LoggedOut(username, password) },
-                state = sessionState,
-            ) {
-                val username = requireNotNull(sessionState.username) { "Username should not be null" }
-                val password = requireNotNull(sessionState.password) { "Password should not be null" }
+    when (val sessionState = _sessionState) {
+      is SessionState.Failure -> FailureScreen(
+        sessionState.cause.message ?: defaultFailureMessage()
+      )
+      is SessionState.Loading -> ProgressIndicator(sessionState.progress)
+      is SessionState.LoggedIn -> LoggedInScreen(sessionState.username)
+      is SessionState.LoggedOut -> LoginScreen(
+        onValueChange = { username, password ->
+          _sessionState = SessionState.LoggedOut(username, password)
+        },
+        state = sessionState,
+      ) {
+        val username = requireNotNull(sessionState.username) { "Username should not be null" }
+        val password = requireNotNull(sessionState.password) { "Password should not be null" }
 
-                sessionService
-                    .login(username, password)
-                    .onEach { _sessionState = it }
-                    .launchIn(coroutineScope)
-            }
-        }
+        sessionService
+          .login(username, password)
+          .onEach { _sessionState = it }
+          .launchIn(coroutineScope)
+      }
     }
+  }
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun LoginScreen(
-    state: SessionState.LoggedOut,
-    onValueChange: (username: String?, password: String?) -> Unit,
-    onLoginClick: () -> Unit,
+  state: SessionState.LoggedOut,
+  onValueChange: (username: String?, password: String?) -> Unit,
+  onLoginClick: () -> Unit,
 ) {
-    Text(
-        style = TextStyle(
-            fontFamily = FontFamily.Cursive,
-            fontSize = 40.sp,
-        ),
-        text = "Login"
+  Text(
+    style = TextStyle(
+      fontFamily = FontFamily.Cursive,
+      fontSize = 40.sp,
+    ),
+    text = "Login"
+  )
+
+  Spacer(modifier = Modifier.height(20.dp))
+
+  OutlinedTextField(
+    onValueChange = { onValueChange(it, state.password) },
+    label = { Text(text = "Username") },
+    value = state.username ?: "",
+  )
+
+  Spacer(modifier = Modifier.height(20.dp))
+
+  OutlinedTextField(
+    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+    visualTransformation = PasswordVisualTransformation(),
+    onValueChange = { onValueChange(state.username, it) },
+    label = { Text(text = "Password") },
+    value = state.password ?: "",
+  )
+
+  Spacer(modifier = Modifier.height(20.dp))
+
+  Box(modifier = Modifier.padding(start = 40.dp)) {
+    Button(
+      content = { Text(text = "Login") },
+      shape = RoundedCornerShape(50.dp),
+      onClick = { onLoginClick() },
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(50.dp)
     )
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    OutlinedTextField(
-        onValueChange = { onValueChange(it, state.password) },
-        label = { Text(text = "Username") },
-        value = state.username ?: "",
-    )
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    OutlinedTextField(
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        visualTransformation = PasswordVisualTransformation(),
-        onValueChange = { onValueChange(state.username, it) },
-        label = { Text(text = "Password") },
-        value = state.password ?: "",
-    )
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    Box(modifier = Modifier.padding(start = 40.dp)) {
-        Button(
-            content = { Text(text = "Login") },
-            shape = RoundedCornerShape(50.dp),
-            onClick = { onLoginClick() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-        )
-    }
+  }
 }
 
 @Composable
-private fun ProgressIndicator(progress: Float, modifier: Modifier = Modifier) {
-    CircularProgressIndicator(
-        modifier = modifier.fillMaxSize(),
-        progress = progress,
-    )
+private fun ProgressIndicator(
+  progress: Float,
+  modifier: Modifier = Modifier
+) {
+  CircularProgressIndicator(
+    modifier = modifier.fillMaxSize(),
+    progress = progress,
+  )
 }
 
 @Composable
-private fun LoggedInScreen(username: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $username",
-        modifier = modifier,
-    )
+private fun LoggedInScreen(
+  username: String,
+  modifier: Modifier = Modifier
+) {
+  Text(
+    text = "Hello $username",
+    modifier = modifier,
+  )
 }
 
 @Composable
-private fun FailureScreen(message: String, modifier: Modifier = Modifier) {
-    Text(message, modifier)
+private fun FailureScreen(
+  message: String,
+  modifier: Modifier = Modifier
+) {
+  Text(message, modifier)
 }
 
 private fun defaultFailureMessage() = "Something went wrong, that's all we know"
