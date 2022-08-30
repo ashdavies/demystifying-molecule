@@ -32,6 +32,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.filterIsInstance
 
 val cursiveTextStyle = TextStyle(
   fontFamily = FontFamily.Cursive,
@@ -49,12 +52,62 @@ internal fun MainScreen(modifier: Modifier = Modifier) {
   when (val screen = currentScreen) {
     is ErrorScreen -> ErrorView(screen.message, goTo)
     is LoggedInScreen -> LoggedInView(screen.username, goTo)
-    is LoginScreen -> LoginView(sessionService = sessionService, goTo)
+    is LoginScreen -> {
+      val events = remember { MutableSharedFlow<LoginUiEvent>(extraBufferCapacity = 50) }
+      val uiModel = LoginPresenter(sessionService).UiModel(events, goTo)
+      LoginView(uiModel, events::tryEmit)
+    }
+  }
+}
+
+sealed class LoginUiModel {
+  object Loading : LoginUiModel()
+
+  object Content: LoginUiModel()
+}
+
+sealed class LoginUiEvent {
+  data class Submit(val username: String, val password: String): LoginUiEvent()
+}
+
+class LoginPresenter(private val sessionService: SessionService) {
+  @Composable
+  fun UiModel(events: Flow<LoginUiEvent>, goTo: (Screen)->Unit): LoginUiModel {
+    var login by remember { mutableStateOf<LoginUiEvent.Submit?>(null) }
+    LaunchedEffect(events) {
+      events.filterIsInstance<LoginUiEvent.Submit>().collect {
+        login = it
+      }
+    }
+
+    return if (login != null) {
+      LaunchedEffect(login) {
+        when (val result = sessionService.login(login!!.username, login!!.password)) {
+          LoginResult.Success -> goTo(LoggedInScreen(login!!.username))
+          is LoginResult.Failure -> goTo(ErrorScreen(result.throwable.message ?: "Failed to login"))
+        }
+      }
+      LoginUiModel.Loading
+    } else {
+      LoginUiModel.Content
+    }
   }
 }
 
 @Composable
-private fun LoginView(
+private fun LoginView(model: LoginUiModel, onEvent: (LoginUiEvent)->Unit) {
+  when (model) {
+    is LoginUiModel.Loading -> ProgressView()
+    is LoginUiModel.Content -> {
+      LoginInputView(onSubmit = { login ->
+        onEvent(LoginUiEvent.Submit(login.username, login.password) )
+      })
+    }
+  }
+}
+
+@Composable
+private fun MonolithicLoginView(
   sessionService: SessionService,
   goTo: (Screen) -> Unit,
 ) {
@@ -62,7 +115,9 @@ private fun LoginView(
   val password = remember { mutableStateOf("") }
   var click by remember { mutableStateOf<Int?>(null) }
 
-  if (click != null) {
+  if (click == null) {
+    MonolithicLoginInputView(username, password, onSubmit = { click = (click ?: 0) + 1 })
+  } else {
     LaunchedEffect(click) {
       when (val result = sessionService.login(username.value, password.value)) {
         LoginResult.Success -> goTo(LoggedInScreen(username.value))
@@ -70,13 +125,32 @@ private fun LoginView(
       }
     }
     ProgressView()
-  } else {
-    LoginInputView(username, password, onSubmit = { click = (click ?: 0) + 1 })
+  }
+}
+
+data class LoginInfo(val username: String, val password: String)
+
+@Composable
+private fun LoginInputView(
+  onSubmit: (LoginInfo)->Unit,
+) {
+  val username = remember { mutableStateOf("") }
+  val password = remember { mutableStateOf("") }
+
+  Column(modifier = Modifier.padding(all = 48.dp)) {
+    Text(style = cursiveTextStyle, text = "Login")
+    RhythmSpacer()
+
+    LabeledTextField(state = username, hidden = false, label = "Username")
+    RhythmSpacer()
+    LabeledTextField(state = password, hidden = true, label = "Password")
+    RhythmSpacer()
+    TextButton({ onSubmit(LoginInfo(username.value, password.value)) }, "Login")
   }
 }
 
 @Composable
-private fun LoginInputView(
+private fun MonolithicLoginInputView(
   username: MutableState<String>,
   password: MutableState<String>,
   onSubmit: () -> Unit,
