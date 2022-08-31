@@ -14,14 +14,18 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.runtime.AbstractApplier
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Composition
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
@@ -32,9 +36,17 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.flow.Flow
+import app.cash.molecule.RecompositionClock
+import app.cash.molecule.moleculeFlow
+import kotlinx.coroutines.CoroutineStart.UNDISPATCHED
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 
 val cursiveTextStyle = TextStyle(
   fontFamily = FontFamily.Cursive,
@@ -54,7 +66,7 @@ internal fun MainScreen(modifier: Modifier = Modifier) {
     is LoggedInScreen -> LoggedInView(screen.username, goTo)
     is LoginScreen -> {
       val events = remember { MutableSharedFlow<LoginUiEvent>(extraBufferCapacity = 50) }
-      val uiModel = LoginPresenter(sessionService).UiModel(events, goTo)
+      val uiModel = LoginPresenter(sessionService, goTo).UiModel(events)
       LoginView(uiModel, events::tryEmit)
     }
   }
@@ -68,30 +80,6 @@ sealed class LoginUiModel {
 
 sealed class LoginUiEvent {
   data class Submit(val username: String, val password: String): LoginUiEvent()
-}
-
-class LoginPresenter(private val sessionService: SessionService) {
-  @Composable
-  fun UiModel(events: Flow<LoginUiEvent>, goTo: (Screen)->Unit): LoginUiModel {
-    var login by remember { mutableStateOf<LoginUiEvent.Submit?>(null) }
-    LaunchedEffect(events) {
-      events.filterIsInstance<LoginUiEvent.Submit>().collect {
-        login = it
-      }
-    }
-
-    return if (login != null) {
-      LaunchedEffect(login) {
-        when (val result = sessionService.login(login!!.username, login!!.password)) {
-          LoginResult.Success -> goTo(LoggedInScreen(login!!.username))
-          is LoginResult.Failure -> goTo(ErrorScreen(result.throwable.message ?: "Failed to login"))
-        }
-      }
-      LoginUiModel.Loading
-    } else {
-      LoginUiModel.Content
-    }
-  }
 }
 
 @Composable
