@@ -35,9 +35,7 @@ internal class LoginPresenterTest {
       assertEquals(LoginAttempt(username, password), sessionService.loginAttempts.awaitValue())
       sessionService.loginResults.trySend(LoginResult.Success)
 
-      println("7")
       assertEquals(LoggedInScreen(username), goTos.awaitValue())
-      println("8")
     }
   }
 }
