@@ -6,31 +6,20 @@ import io.ashdavies.sample.LoginUiEvent.Submit
 import io.ashdavies.sample.LoginUiModel.Loading
 import io.reactivex.Observable
 
-class RxLoginPresenter(
-  private val sessionService: SessionServiceImpl,
-  private val goTo: (Screen) -> Unit,
-) {
-  fun present(events: Observable<LoginUiEvent>): Observable<LoginUiModel> {
-    return events.flatMap<LoginUiModel> { event ->
+class RxLoginPresenter(val service: SessionServiceImpl, val goTo: (Screen) -> Unit) {
+  fun present(events: Observable<LoginUiEvent>): Observable<LoginUiModel> =
+    events.flatMap<LoginUiModel> { event ->
       when (event) {
-        is Submit -> {
-          sessionService.loginSingle(event.username, event.password)
-            .toObservable()
-            .map { result ->
-              when (result) {
-                is Success -> {
-                  goTo(LoggedInScreen(event.username))
-                }
-                is Failure -> {
-                  goTo(ErrorScreen(result.throwable?.message ?: "Something went wrong"))
-                }
-              }
-              Loading
-            }
-            .startWith(Loading)
-        }
+        is Submit -> service.loginSingle(event.username, event.password).toObservable().map { result ->
+          when (result) {
+            is Failure ->
+              goTo(ErrorScreen(result.throwable?.message ?: "Something went wrong"))
+
+            is Success ->
+              goTo(LoggedInScreen(event.username))
+          }
+          Loading
+        }.startWith(Loading)
       }
-    }
-      .startWith(LoginUiModel.Content)
-  }
+    }.startWith(LoginUiModel.Content)
 }
