@@ -13,10 +13,9 @@ import kotlinx.coroutines.yield
 import org.junit.Test
 import kotlin.test.assertEquals
 
-@OptIn(ExperimentalCoroutinesApi::class)
 internal class LoginPresenterTest {
   @Test
-  fun immediate() = runBlocking {
+  fun works() = runBlocking {
     val goTos = Channel<Screen>(UNLIMITED)
     val sessionService = FakeSessionService()
     val events = MutableSharedFlow<LoginUiEvent>()
@@ -24,7 +23,6 @@ internal class LoginPresenterTest {
     val password = "password"
 
     val presenter = LoginPresenter(sessionService, goTos::trySend)
-    println("1")
     moleculeFlow(RecompositionClock.Immediate) {
       presenter.UiModel(events)
     }.test {
