@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 
 class CoLoginPresenter(
-  private val sessionService: SessionService,
+  private val sessionService: SessionServiceImpl,
   private val goTo: (Screen) -> Unit,
   ) {
   suspend fun present(events: Flow<LoginUiEvent>, emit: (LoginUiModel)->Unit) {

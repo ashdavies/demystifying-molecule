@@ -7,7 +7,7 @@ import io.ashdavies.sample.LoginUiModel.Loading
 import io.reactivex.Observable
 
 class RxLoginPresenter(
-  private val sessionService: SessionService,
+  private val sessionService: SessionServiceImpl,
   private val goTo: (Screen) -> Unit,
 ) {
   fun present(events: Observable<LoginUiEvent>): Observable<LoginUiModel> {

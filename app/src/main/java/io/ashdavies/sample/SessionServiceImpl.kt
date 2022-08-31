@@ -2,21 +2,23 @@ package io.ashdavies.sample
 
 import io.reactivex.Single
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
-import kotlin.random.Random.Default.nextBoolean
-import kotlin.time.Duration.Companion.milliseconds
 
 sealed class LoginResult {
   data class Failure(val throwable: Throwable): LoginResult()
   object Success : LoginResult()
 }
 
-class SessionService {
+interface SessionService {
+  fun loginSingle(username: String, password: String): Single<LoginResult>
+
+  suspend fun login(username: String, password: String): LoginResult
+}
+
+class SessionServiceImpl : SessionService{
   private val random = Random(System.currentTimeMillis())
-  fun loginSingle(username: String, password: String): Single<LoginResult> =
+  override fun loginSingle(username: String, password: String): Single<LoginResult> =
     Single.fromCallable {
       if (random.nextBoolean()) {
         LoginResult.Success
@@ -26,7 +28,7 @@ class SessionService {
     }
       .delay(2000, TimeUnit.MILLISECONDS)
 
-  suspend fun login(
+  override suspend fun login(
     username: String,
     password: String
   ): LoginResult {

@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel to demonstrate traditional architecture view state modelling
  */
-class LoginViewModel(private val service: SessionService) : ViewModel() {
+class LoginViewModel(private val service: SessionServiceImpl) : ViewModel() {
 
   var viewState by mutableStateOf<LoginResult?>(null)
     private set
@@ -31,7 +31,7 @@ class LoginViewModel(private val service: SessionService) : ViewModel() {
   }
 }
 
-class MoleculeViewModel(private val service: SessionService) : ViewModel() {
+class MoleculeViewModel(private val service: SessionServiceImpl) : ViewModel() {
   val viewState = viewModelScope.launchMolecule(RecompositionClock.ContextClock) {
     val serviceResult by produceState<LoginResult?>(null) {
       value = service.login(TODO(/* username */), TODO(/* password */))
